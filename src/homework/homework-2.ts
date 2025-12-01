@@ -1,30 +1,35 @@
+// Базовые типы
+type TPrimitive = null | undefined | boolean | number | string | symbol | bigint;
+type TValue = TPrimitive | TValue[] | object;
+type TObjectValue = { [key: string]: TValue };
+
 // Интерфейс компаратора
-interface IComparator {
+interface IComparator<T extends TValue> {
     // Сравнение элементов
-    compare(a: any, b: any, context?: DeepEqualEngine): boolean;
+    compare(a: T, b: T, context?: DeepEqualEngine): boolean;
 
     // Возможность использования компаратора
-    canHandle(value: any): boolean;
+    canHandle(value: T): boolean;
 }
 
 // Реализация сравнения примитивных типов
-class PrimitiveComparator implements IComparator {
-    canHandle(value: any) {
+class PrimitiveComparator implements IComparator<TPrimitive> {
+    canHandle(value: TPrimitive) {
         return value == null || typeof value !== 'object';
     }
 
-    compare(a: any, b: any) {
+    compare(a: TPrimitive, b: TPrimitive) {
         return a === b;
     }
 }
 
 // Реализация сравнения массивов
-class ArrayComparator implements IComparator {
-    canHandle(value: any) {
+class ArrayComparator implements IComparator<TValue[]> {
+    canHandle(value: TValue[]) {
         return Array.isArray(value);
     }
 
-    compare(a: [], b: [], context: DeepEqualEngine) {
+    compare(a: TValue[], b: TValue[], context: DeepEqualEngine) {
         if (!Array.isArray(b) || a.length !== b.length) {
             return false;
         }
@@ -34,12 +39,12 @@ class ArrayComparator implements IComparator {
 }
 
 // Реализация сравнения объектов
-class ObjectComparator implements IComparator {
-    canHandle(value: any) {
+class ObjectComparator implements IComparator<TObjectValue> {
+    canHandle(value: TObjectValue) {
         return value != null && typeof value === 'object' && !Array.isArray(value);
     }
 
-    compare(a: any, b: any, context: DeepEqualEngine) {
+    compare(a: TObjectValue, b: TObjectValue, context: DeepEqualEngine) {
         if (typeof b !== 'object' || b == null || Array.isArray(b)) {
             return false;
         }
@@ -59,7 +64,7 @@ class ObjectComparator implements IComparator {
 
 // Класс движка сравнений
 class DeepEqualEngine {
-    private comparators: IComparator[] = [];
+    private comparators: IComparator<TValue>[] = [];
     private visited: WeakSet<WeakKey>;
 
     constructor() {
@@ -71,7 +76,7 @@ class DeepEqualEngine {
         this.visited = new WeakSet();
     }
 
-    deepEqual(a: any, b: any) {
+    deepEqual(a: TValue, b: TValue) {
         // Проверка на циклические ссылки
         if (typeof a === 'object' && a !== null) {
             if (this.visited.has(a)) {
@@ -90,17 +95,17 @@ class DeepEqualEngine {
     }
 
     // Поиск подходящего компаратора
-    findComparator(value: any) {
+    findComparator(value: TValue) {
         return this.comparators.find(comp => comp.canHandle(value));
     }
 
     // Метод для добавления новых компараторов
-    addComparator(comparator: IComparator) {
+    addComparator(comparator: IComparator<TValue>) {
         this.comparators.unshift(comparator); // добавляем в начало для приоритета
     }
 
     // Тест
-    test(a: any, b: any) {
+    test(a: TValue, b: TValue) {
         const result = engine.deepEqual(a, b);
         console.log(a, `=`, b, `is`, result);
         return result;
@@ -111,7 +116,7 @@ const engine = new DeepEqualEngine();
 
 console.log("> Примитивы:");
 engine.test(1, 1);
-engine.test(1, 1);
+engine.test(1, 3);
 engine.test("abc", "abc");
 engine.test("abc", "ABC");
 
